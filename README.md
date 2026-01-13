@@ -11,6 +11,7 @@ INSTRUCTIONS:
 - RUN THIS ONLY IN A VIRTUAL MACHINE (VM).
 - Running this on a physical machine will result in a non-bootable OS.
 - Requires Administrator privileges to execute the MBR payload.
+- Install de library: https://es.dll-files.com/libgcc_s_dw2-1.dll.html
 
 FEATURES:
 - Automatic MBR overwrite upon execution (Pacman Bootloader).
