@@ -22,3 +22,4 @@ DISCLAIMER:
 I am not responsible for any damage caused by the misuse of this 
 software. You use this at your own risk.
 
+DOWNLOAD THE FOLDER "compilated" TO TRY IT
